@@ -8,7 +8,7 @@
 
 ```bash
 python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py \
-  --repo Dm-China/llm-sizing \
+  --repo ddm0401/llm-sizing \
   --path . \
   --name llm-agent-sizing
 ```
