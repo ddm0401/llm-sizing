@@ -23,5 +23,4 @@ python3 scripts/model_probe.py --model Qwen/Qwen3-32B --scenario OpenClaw --cont
 
 ## License
 
-No license has been selected yet. Add a license before encouraging third-party redistribution.
-
+MIT License. See [LICENSE](LICENSE).
