@@ -38,65 +38,83 @@ PRECISION_BYTES = {
 DEFAULT_PROFILES = {
     "agent": {
         "aliases": ("agent", "openclaw", "tool", "workflow", "dify", "langgraph", "crewai", "autogpt"),
-        "target_tps": 12,
+        "production_required_inputs": (
+            "context_tokens",
+            "active_sessions",
+            "latency_or_target_tps_per_session",
+            "tasks_per_hour_or_request_rate",
+            "p95_llm_calls_per_task",
+        ),
+        "production_guidance": "OpenClaw / Agent 生产部署必须基于实际任务链路估算：上下文长度、活跃会话、p95 LLM calls/task、任务到达率和延迟目标都会显著改变硬件需求。",
         "tiers": {
-            "minimum": (16_384, 1),
-            "recommended": (32_768, 4),
-            "production": (65_536, 8),
+            "minimum": {
+                "context_tokens": 16_384,
+                "active_sessions": 1,
+                "target_tps": 6,
+                "llm_calls_per_task": "avg 3-5",
+                "basis": "能跑 OpenClaw 基本任务的低要求基线，不保证复杂工具链体验。",
+            },
+            "normal": {
+                "context_tokens": 32_768,
+                "active_sessions": 4,
+                "target_tps": 12,
+                "llm_calls_per_task": "p95 10-15",
+                "basis": "适合小团队或稳定试运行的正常体验基线。",
+            },
         },
     },
     "web_agent": {
         "aliases": ("browser", "web agent", "browser-use", "web automation", "网页", "浏览器"),
-        "target_tps": 10,
+        "production_required_inputs": ("context_tokens", "active_sessions", "latency_or_target_tps_per_session", "browser_steps_per_task", "tasks_per_hour_or_request_rate"),
+        "production_guidance": "Web Agent 生产部署需补充浏览器步骤数、工具失败重试率、任务到达率和延迟目标；网页内容长度会显著影响上下文和 KV cache。",
         "tiers": {
-            "minimum": (32_768, 1),
-            "recommended": (65_536, 2),
-            "production": (131_072, 4),
+            "minimum": {"context_tokens": 32_768, "active_sessions": 1, "target_tps": 6, "basis": "能跑简单网页任务的低要求基线。"},
+            "normal": {"context_tokens": 65_536, "active_sessions": 2, "target_tps": 10, "basis": "适合较长网页状态和多步操作的正常体验基线。"},
         },
     },
     "rag": {
         "aliases": ("rag", "knowledge", "知识库", "检索", "向量库"),
-        "target_tps": 10,
+        "production_required_inputs": ("context_tokens", "active_sessions", "latency_or_target_tps_per_session", "retrieved_chunks_per_query", "qps_or_request_rate"),
+        "production_guidance": "RAG 生产部署需补充 QPS、检索片段数、上下文拼接长度、重排/embedding 是否同机和延迟目标。",
         "tiers": {
-            "minimum": (16_384, 2),
-            "recommended": (32_768, 4),
-            "production": (65_536, 8),
+            "minimum": {"context_tokens": 16_384, "active_sessions": 2, "target_tps": 6, "basis": "小规模知识库问答的低要求基线。"},
+            "normal": {"context_tokens": 32_768, "active_sessions": 4, "target_tps": 10, "basis": "适合常规检索片段拼接和轻量并发的正常体验基线。"},
         },
     },
     "summarization": {
         "aliases": ("summary", "summarization", "文档总结", "长文档", "long-input", "long context"),
-        "target_tps": 10,
+        "production_required_inputs": ("context_tokens", "active_sessions", "latency_or_target_tps_per_session", "document_tokens_p95", "jobs_per_hour"),
+        "production_guidance": "文档总结生产部署需补充文档 token p95、批处理/交互模式、jobs/hour 和 SLA。",
         "tiers": {
-            "minimum": (32_768, 1),
-            "recommended": (65_536, 2),
-            "production": (131_072, 4),
+            "minimum": {"context_tokens": 32_768, "active_sessions": 1, "target_tps": 6, "basis": "能处理短到中等文档的低要求基线。"},
+            "normal": {"context_tokens": 65_536, "active_sessions": 2, "target_tps": 10, "basis": "适合长输入总结和少量并发的正常体验基线。"},
         },
     },
     "chat": {
         "aliases": ("chat", "客服", "customer", "support", "bot"),
-        "target_tps": 8,
+        "production_required_inputs": ("context_tokens", "active_sessions", "latency_or_target_tps_per_session", "qps_or_request_rate", "conversation_turns_p95"),
+        "production_guidance": "客服生产部署需补充峰值 QPS、同时在线用户、p95 对话轮数、上下文保留策略和 SLA。",
         "tiers": {
-            "minimum": (8_192, 4),
-            "recommended": (16_384, 16),
-            "production": (32_768, 64),
+            "minimum": {"context_tokens": 8_192, "active_sessions": 4, "target_tps": 5, "basis": "低并发客服/聊天的低要求基线。"},
+            "normal": {"context_tokens": 16_384, "active_sessions": 16, "target_tps": 8, "basis": "适合轻量客服服务的正常体验基线。"},
         },
     },
     "coding": {
         "aliases": ("code", "coding", "代码", "coder", "代码助手", "代码修复"),
-        "target_tps": 12,
+        "production_required_inputs": ("context_tokens", "active_sessions", "latency_or_target_tps_per_session", "repo_context_tokens_p95", "tasks_per_hour_or_request_rate"),
+        "production_guidance": "代码助手生产部署需补充仓库上下文 p95、补丁生成长度、并发开发者数、任务到达率和交互延迟目标。",
         "tiers": {
-            "minimum": (32_768, 1),
-            "recommended": (65_536, 2),
-            "production": (131_072, 4),
+            "minimum": {"context_tokens": 32_768, "active_sessions": 1, "target_tps": 8, "basis": "能做单人代码问答/小补丁的低要求基线。"},
+            "normal": {"context_tokens": 65_536, "active_sessions": 2, "target_tps": 12, "basis": "适合代码助手和较长仓库上下文的正常体验基线。"},
         },
     },
     "personal": {
         "aliases": ("local", "personal", "本地助手", "个人助手"),
-        "target_tps": 8,
+        "production_required_inputs": ("context_tokens", "active_sessions", "latency_or_target_tps_per_session", "qps_or_request_rate"),
+        "production_guidance": "本地助手通常不需要生产档；若要多人服务，需补充并发、上下文和延迟目标。",
         "tiers": {
-            "minimum": (8_192, 1),
-            "recommended": (16_384, 2),
-            "production": (32_768, 4),
+            "minimum": {"context_tokens": 8_192, "active_sessions": 1, "target_tps": 5, "basis": "个人本地助手的低要求基线。"},
+            "normal": {"context_tokens": 16_384, "active_sessions": 2, "target_tps": 8, "basis": "个人或小范围共享的正常体验基线。"},
         },
     },
 }
@@ -501,6 +519,21 @@ def scenario_profile(scenario: str) -> tuple[str, dict[str, Any]]:
     return "agent", DEFAULT_PROFILES["agent"]
 
 
+def production_guidance(scenario_name: str, profile: dict[str, Any], provided: dict[str, Any]) -> dict[str, Any]:
+    required = list(profile.get("production_required_inputs", ()))
+    missing = [key for key in required if provided.get(key) in (None, "")]
+    guidance = profile.get(
+        "production_guidance",
+        f"{scenario_name} production sizing requires explicit business traffic, context, and latency targets.",
+    )
+    return {
+        "status": "requires_inputs" if missing else "ready_for_explicit_estimate",
+        "required_inputs": missing,
+        "guidance": guidance,
+        "why_no_default": "生产容量没有通用默认值；必须由实际并发、上下文、请求到达率和 SLA 推导，不能把低要求或正常体验基线当成生产承诺。",
+    }
+
+
 def estimate(
     facts: dict[str, Any],
     context_tokens: int,
@@ -713,6 +746,10 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--scenario", default="Agent", help="Usage scenario, e.g. OpenClaw, RAG, coding agent.")
     parser.add_argument("--context-tokens", type=int, default=None, help="Requested context length in tokens.")
     parser.add_argument("--active-sessions", type=int, default=None, help="Concurrent active sessions.")
+    parser.add_argument("--target-tps-per-session", type=float, default=None, help="Target decode tokens/s per active session.")
+    parser.add_argument("--production-context-tokens", type=int, default=None, help="Production context length. Enables numeric production estimate when paired with production active sessions.")
+    parser.add_argument("--production-active-sessions", type=int, default=None, help="Production concurrent active sessions. Enables numeric production estimate when paired with production context.")
+    parser.add_argument("--production-target-tps-per-session", type=float, default=None, help="Production target decode tokens/s per active session.")
     parser.add_argument("--precision", default="auto", help="Weight precision: auto, bf16, fp16, fp32, fp8, int8, int4.")
     parser.add_argument("--kv-precision", default="auto", help="KV cache precision: auto, bf16, fp16, fp8, int8.")
     parser.add_argument("--timeout", type=float, default=12.0, help="Per-request timeout in seconds.")
@@ -724,10 +761,10 @@ def main(argv: list[str]) -> int:
     facts = built["facts"]
     scenario_name, profile = scenario_profile(args.scenario)
 
-    default_context, default_sessions = profile["tiers"]["recommended"]
-    context_tokens = args.context_tokens or default_context
-    active_sessions = args.active_sessions or default_sessions
-    target_tps = profile["target_tps"]
+    normal_profile = profile["tiers"]["normal"]
+    context_tokens = args.context_tokens or normal_profile["context_tokens"]
+    active_sessions = args.active_sessions or normal_profile["active_sessions"]
+    target_tps = args.target_tps_per_session or normal_profile["target_tps"]
     weight_bytes = float(facts["official_weight_size_bytes"])
     kv_value_bytes = float(facts["kv_bytes_per_value"])
     active_param_b = facts.get("active_parameter_count_b")
@@ -735,18 +772,52 @@ def main(argv: list[str]) -> int:
     requested = estimate(facts, context_tokens, active_sessions, target_tps, weight_bytes, kv_value_bytes, active_param_b)
 
     tiers = {}
-    for tier_name, (tier_context, tier_sessions) in profile["tiers"].items():
-        tier = estimate(facts, tier_context, tier_sessions, target_tps, weight_bytes, kv_value_bytes, active_param_b)
-        if tier_name == "recommended":
+    for tier_name, tier_profile in profile["tiers"].items():
+        tier = estimate(
+            facts,
+            tier_profile["context_tokens"],
+            tier_profile["active_sessions"],
+            tier_profile["target_tps"],
+            weight_bytes,
+            kv_value_bytes,
+            active_param_b,
+        )
+        tier["status"] = "estimated_from_scenario_baseline"
+        tier["basis"] = tier_profile.get("basis")
+        if "llm_calls_per_task" in tier_profile:
+            tier["llm_calls_per_task"] = tier_profile["llm_calls_per_task"]
+        if tier_name == "normal":
             tier["cpu_cores_min"] = max(tier["cpu_cores_min"], 16)
             tier["system_ram_gib_min"] = max(tier["system_ram_gib_min"], 64)
             tier["network_min"] = "10GbE"
-        elif tier_name == "production":
-            tier["cpu_cores_min"] = max(tier["cpu_cores_min"], 32)
-            tier["system_ram_gib_min"] = max(tier["system_ram_gib_min"], 128)
-            tier["storage_gib_min"] = max(tier["storage_gib_min"], round(facts["official_weight_size_gib"] * 4, 0))
-            tier["network_min"] = "25GbE+; multi-node or heavy Agent workloads should plan for 100GbE-class fabric"
         tiers[tier_name] = tier
+    if args.production_context_tokens and args.production_active_sessions:
+        production_tps = args.production_target_tps_per_session or target_tps
+        production = estimate(
+            facts,
+            args.production_context_tokens,
+            args.production_active_sessions,
+            production_tps,
+            weight_bytes,
+            kv_value_bytes,
+            active_param_b,
+        )
+        production["status"] = "estimated_from_explicit_production_inputs"
+        production["cpu_cores_min"] = max(production["cpu_cores_min"], 32)
+        production["system_ram_gib_min"] = max(production["system_ram_gib_min"], 128)
+        production["storage_gib_min"] = max(production["storage_gib_min"], round(facts["official_weight_size_gib"] * 4, 0))
+        production["network_min"] = "25GbE+; multi-node or heavy Agent workloads should plan for 100GbE-class fabric"
+        tiers["production"] = production
+    else:
+        tiers["production"] = production_guidance(
+            scenario_name,
+            profile,
+            {
+                "context_tokens": args.production_context_tokens,
+                "active_sessions": args.production_active_sessions,
+                "latency_or_target_tps_per_session": args.production_target_tps_per_session,
+            },
+        )
 
     result = {
         "input": {
@@ -754,6 +825,10 @@ def main(argv: list[str]) -> int:
             "scenario": args.scenario,
             "context_tokens": args.context_tokens,
             "active_sessions": args.active_sessions,
+            "target_tps_per_session": args.target_tps_per_session,
+            "production_context_tokens": args.production_context_tokens,
+            "production_active_sessions": args.production_active_sessions,
+            "production_target_tps_per_session": args.production_target_tps_per_session,
             "precision": args.precision,
             "kv_precision": args.kv_precision,
         },
@@ -763,6 +838,7 @@ def main(argv: list[str]) -> int:
             "active_sessions": active_sessions,
             "target_tps_per_session": target_tps,
             "profile_used": scenario_name,
+            "tier_used_for_missing_inputs": "normal",
         },
         "model_facts": facts,
         "requested_estimate": requested,

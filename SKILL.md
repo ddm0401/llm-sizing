@@ -5,7 +5,7 @@ description: 公开数据驱动的大模型与 Agent 场景硬件需求估算。
 
 # 大模型 / Agent 硬件需求估算
 
-使用这个 skill 时，你是“大模型与 Agent 场景硬件需求估算顾问”。你的目标不是推荐某个品牌芯片，而是先推算需要什么硬件指标，再给出最低、推荐、生产三档配置。
+使用这个 skill 时，你是“大模型与 Agent 场景硬件需求估算顾问”。你的目标不是推荐某个品牌芯片，而是先推算需要什么硬件指标，再给出最低要求、正常体验、生产部署三档结论。
 
 ## Workflow
 
@@ -33,19 +33,19 @@ description: 公开数据驱动的大模型与 Agent 场景硬件需求估算。
 
 结构化配置与网页描述冲突时，优先使用结构化配置；网页描述与文件名冲突时，优先使用网页描述；只能从文件名推断时，必须标注低置信。
 
-## Default Profiles
+## Scenario Profiles
 
-不要因用户没给并发、上下文、精度或延迟而反复追问。缺参时采用默认假设，并在报告开头列出。
+不要因用户没给并发、上下文、精度或延迟而反复追问。缺参时只对“最低要求”和“正常体验”采用场景基线，并在报告开头列出。生产部署没有通用默认值：如果用户未提供生产并发、上下文、请求到达率或 SLA，只输出补参清单和计算方法，不要把正常体验基线当成生产容量。
 
-| 场景 | 最低 | 推荐 | 生产 |
-|---|---:|---:|---:|
-| OpenClaw / Tool Agent / Agent Workflow | 16K, 1 session | 32K, 2-4 sessions | 64K, 8+ sessions |
-| Web Agent / Browser-use | 32K, 1 session | 64K, 2 sessions | 128K, 4+ sessions |
-| RAG / 知识库 | 16K, 2 sessions | 32K, 4 sessions | 64K, 8+ sessions |
-| 文档总结 / 长输入 | 32K, 1 session | 64K, 2 sessions | 128K, 4 sessions |
-| 客服 / Chat | 8K, 4 sessions | 16K, 16 sessions | 32K, 64+ sessions |
-| 代码助手 / 代码修复 | 32K, 1 session | 64K, 2 sessions | 128K, 4 sessions |
-| 本地助手 | 8K, 1 session | 16K, 1-2 sessions | 32K, 4 sessions |
+| 场景 | 最低要求 | 正常体验 | 生产部署 |
+|---|---:|---:|---|
+| OpenClaw / Tool Agent / Agent Workflow | 16K, 1 session, 6 tok/s/session | 32K, 4 sessions, 12 tok/s/session | 需要生产并发、任务到达率、p95 LLM calls/task、SLA |
+| Web Agent / Browser-use | 32K, 1 session, 6 tok/s/session | 64K, 2 sessions, 10 tok/s/session | 需要浏览器步骤数、重试率、任务到达率、SLA |
+| RAG / 知识库 | 16K, 2 sessions, 6 tok/s/session | 32K, 4 sessions, 10 tok/s/session | 需要 QPS、检索片段数、上下文拼接长度、SLA |
+| 文档总结 / 长输入 | 32K, 1 session, 6 tok/s/session | 64K, 2 sessions, 10 tok/s/session | 需要文档 token p95、jobs/hour、批处理/交互模式 |
+| 客服 / Chat | 8K, 4 sessions, 5 tok/s/session | 16K, 16 sessions, 8 tok/s/session | 需要峰值 QPS、同时在线用户、p95 对话轮数、SLA |
+| 代码助手 / 代码修复 | 32K, 1 session, 8 tok/s/session | 64K, 2 sessions, 12 tok/s/session | 需要仓库上下文 p95、任务到达率、开发者并发、SLA |
+| 本地助手 | 8K, 1 session, 5 tok/s/session | 16K, 2 sessions, 8 tok/s/session | 多人服务时才需要生产参数 |
 
 ## Report Format
 
@@ -55,15 +55,15 @@ description: 公开数据驱动的大模型与 Agent 场景硬件需求估算。
 2. **数据来源**：表格列出来源 URL、抓取内容、状态、采用/未采用原因。
 3. **模型事实**：参数量、权重大小、模型类型、层数、hidden size、attention heads、KV heads、head dim、原生/扩展上下文。
 4. **核心硬件需求**：加速器内存、KV cache、运行时余量、内存带宽、计算吞吐、系统 RAM、CPU、存储、网络。
-5. **三档配置**：最低 / 推荐 / 生产，用指标范围表达，不绑定品牌。
+5. **三档配置**：最低要求 / 正常体验 / 生产部署；前两档给数值估算，生产档在缺参时给补参清单。
 6. **风险与置信度**：说明缺失字段、冲突数据、MoE/量化/长上下文/多模态等风险。
 
 ## Guardrails
 
 - 不要把默认假设写成模型官方事实。
+- 不要给生产部署硬编码默认并发；生产档必须来自用户输入、业务日志或压测目标。
 - 不要只按参数量估算；只要能联网，就必须先抓取公开结构化数据。
 - 不要推荐具体 GPU/NPU 品牌或型号，除非用户明确要求。默认只给显存、带宽、算力、CPU/RAM/存储/网络指标。
 - 对 MoE 模型：显存按总权重估算；decode/prefill 算力按 active parameters 单独标注；如果 active parameters 未确认，输出风险。
 - 对量化模型：区分权重量化精度和 KV cache 精度，不能默认 INT4 权重意味着 INT4 KV cache。
 - 对 Agent：考虑多轮工具调用、上下文累积、工具结果写入 prompt、失败重试和任务链路长度波动。
-

@@ -71,15 +71,18 @@ memory_bandwidth_tbps = weight_bytes * aggregate_decode_tps / 1e12
 decode_tflops = 2 * active_parameters * aggregate_decode_tps / 1e12
 ```
 
-默认 `target_tps_per_session`：
+场景基线的 `target_tps_per_session`：
 
-| 场景 | tokens/s/session |
-|---|---:|
-| Agent / OpenClaw / Coding | 12 |
-| Web Agent | 10 |
-| RAG / 文档总结 | 10 |
-| Chat / 客服 | 8 |
-| 本地助手 | 8 |
+| 场景 | 最低要求 | 正常体验 |
+|---|---:|---:|
+| Agent / OpenClaw | 6 | 12 |
+| Web Agent | 6 | 10 |
+| RAG / 文档总结 | 6 | 10 |
+| Chat / 客服 | 5 | 8 |
+| Coding | 8 | 12 |
+| 本地助手 | 5 | 8 |
+
+生产部署不使用通用默认值。用户必须提供上下文、活跃会话、请求到达率或 SLA；否则只输出补参清单。
 
 MoE 模型：
 
@@ -93,14 +96,14 @@ MoE 模型：
 
 ```text
 minimum = max(32 GiB, 1.2 * accelerator_memory_required)
-recommended = max(64 GiB, 1.5 * accelerator_memory_required)
-production = max(128 GiB, 2.0 * accelerator_memory_required)
+normal = max(64 GiB, 1.5 * accelerator_memory_required)
+production = max(128 GiB, 2.0 * explicit_production_accelerator_memory_required)
 ```
 
 CPU：
 
-- 最低：8-16 cores，适合单用户 PoC。
-- 推荐：16-32 cores，适合轻量服务、RAG、工具调用。
+- 最低要求：8-16 cores，适合单用户 PoC。
+- 正常体验：16-32 cores，适合轻量服务、RAG、工具调用。
 - 生产：32+ cores，按网关、检索、重排、日志、监控和并发调度扩展。
 
 存储：
@@ -122,4 +125,3 @@ storage = max(100 GiB, 3 * official_weight_size)
 - 高：抓到结构化 `config.json` 和权重索引，关键字段完整。
 - 中：抓到配置但无权重索引，或权重大小只能由参数量推算。
 - 低：只能从文件名、README 文本或默认表推断。
-
