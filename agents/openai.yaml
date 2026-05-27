@@ -1,0 +1,8 @@
+interface:
+  display_name: "LLM Agent Hardware Sizing"
+  short_description: "公开数据驱动估算大模型部署硬件指标"
+  default_prompt: "Use $llm-agent-hardware-sizing to estimate deployment hardware requirements for Qwen3-32B running an OpenClaw Agent."
+
+policy:
+  allow_implicit_invocation: true
+
